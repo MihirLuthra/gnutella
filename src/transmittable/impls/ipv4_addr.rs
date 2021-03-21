@@ -13,13 +13,13 @@ impl Deserializable for Ipv4Addr {
         if data.len() == 4 {
             Ok(Ipv4Addr::new(data[0], data[1], data[2], data[3]))
         } else {
-            Err(Box::new(Error::DeserializationFailed(format!(
+            Err(Box::new(Error::DeserializationFailed{ reason: format!(
                 "4 bytes input data required for constructing Ipv4Addr.\n\
                  Input array should have length 4 but found data.len() = {}\n\
                  where data = {:?}",
                 data.len(),
-                data
-            ))))
+                data)
+            }))
         }
     }
 }

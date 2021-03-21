@@ -23,16 +23,12 @@ macro_rules! impl_integer_transmittable {
                     let data: [u8; size_of::<$ty>()] = data.try_into()?;
                     Ok(<$ty>::from_le_bytes(data))
                 } else {
-                    Err(Box::new(
-                            Error::DeserializationFailed(
-                                format!(
-                                    "{} bytes input data is required for constructing {}.\n\
-                                     Input array should have length {0} but found data.len() = {}\n\
-                                     where data = {:?}", size_of::<$ty>(), stringify!($ty), data.len(), data
-                                )
-                            )
-                    ))
-
+                    Err(Box::new(Error::DeserializationFailed {
+                         reason: format!(
+                            "{} bytes input data is required for constructing {}.\n\
+                             Input array should have length {0} but found data.len() = {}\n\
+                             where data = {:?}", size_of::<$ty>(), stringify!($ty), data.len(), data)
+                    }))
                 }
             }
         }
