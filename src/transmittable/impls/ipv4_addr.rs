@@ -1,4 +1,4 @@
-use crate::{Deserializable, Serializable, Transmittable, Error};
+use crate::transmittable::{Deserializable, Error, Serializable, Transmittable};
 use std::net::Ipv4Addr;
 
 impl Serializable for Ipv4Addr {

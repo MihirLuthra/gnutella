@@ -1,6 +1,6 @@
 use std::{thread};
 
-use gnutella::{Serializable, Deserializable};
+use gnutella::transmittable::{Serializable, Deserializable};
 use std::net::Ipv4Addr;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,16 +28,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn start_server() -> Result<(), Box<dyn std::error::Error>> {
-    // Start listening to other nodes for
-    // Ping, Pong, Query, QueryHit and Push
-    let server_thread_join_handle = thread::Builder::new()
-        .name("Server thread".to_string())
-        .spawn(|| {
-           // gnutella::start_server();
-        })?;
+// fn start_server() -> Result<(), Box<dyn std::error::Error>> {
+//     // Start listening to other nodes for
+//     // Ping, Pong, Query, QueryHit and Push
+//     let server_thread_join_handle = thread::Builder::new()
+//         .name("Server thread".to_string())
+//         .spawn(|| {
+//            // gnutella::start_server();
+//         })?;
 
-    server_thread_join_handle.join().unwrap();
+//     server_thread_join_handle.join().unwrap();
 
-    Ok(())
-}
+//     Ok(())
+// }

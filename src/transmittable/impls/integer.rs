@@ -1,4 +1,4 @@
-use crate::{Deserializable, Error, Serializable, Transmittable};
+use crate::transmittable::{Deserializable, Error, Serializable, Transmittable};
 use std::{convert::TryInto, mem::size_of};
 
 macro_rules! impl_integer_transmittable {
