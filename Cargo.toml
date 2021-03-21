@@ -9,3 +9,5 @@ description = "Gnutella implementation in rust; WIP"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+uuid = { version = "0.8.2", features = ["v4"] }

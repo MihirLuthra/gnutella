@@ -1,7 +1,4 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod core;
+
+use crate::core::transmittable::{Serializable, Deserializable, Transmittable, Error};
+
