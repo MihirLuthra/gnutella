@@ -1,10 +1,9 @@
-use std::{error::Error, thread};
-mod core;
+use std::{thread};
 
-use crate::core::transmittable::{Serializable, Deserializable, Transmittable};
+use gnutella::{Serializable, Deserializable};
 use std::net::Ipv4Addr;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let x = Ipv4Addr::new(1, 2, 3, 4);
     
@@ -18,7 +17,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("z = {:?}", z);
 
-    match u32::deserialize(&[4, 0, 0, 0, 0]) {
+
+    match i32::deserialize(&42u128.serialize().unwrap()) {
         Ok(val) => println!("val = {}", val),
         Err(e) => println!("err = {}", e),
     }
@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn start_server() -> Result<(), Box<dyn Error>> {
+fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start listening to other nodes for
     // Ping, Pong, Query, QueryHit and Push
     let server_thread_join_handle = thread::Builder::new()
