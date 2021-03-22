@@ -18,10 +18,10 @@ macro_rules! impl_integer_transmittable {
         /// Gnutella specification asks everything to be little ending
         /// unless specified explicitly.
         impl Deserializable for $ty {
-            fn deserialize(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-                if data.len() == size_of::<$ty>() {
-                    let data: [u8; size_of::<$ty>()] = data.try_into()?;
-                    Ok(<$ty>::from_le_bytes(data))
+            fn deserialize(data: &[u8]) -> Result<(Self, usize), Box<dyn std::error::Error>> {
+                if data.len() >= size_of::<$ty>() {
+                    let data: [u8; size_of::<$ty>()] = data[0..size_of::<$ty>()].try_into()?;
+                    Ok((<$ty>::from_le_bytes(data), data.len()))
                 } else {
                     Err(Box::new(Error::DeserializationFailed {
                          reason: format!(

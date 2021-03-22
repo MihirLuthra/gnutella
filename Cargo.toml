@@ -11,3 +11,8 @@ description = "Gnutella implementation in rust; WIP"
 [dependencies]
 uuid = { version = "0.8.2", features = ["v4"] }
 snafu = "0.6.10"
+gnutella_transmittable_derive = { path = "gnutella_transmittable_derive" }
+
+[[bin]]
+name = "gnutella"
+path = "src/main.rs"

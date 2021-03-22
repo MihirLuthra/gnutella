@@ -9,9 +9,9 @@ impl Serializable for Ipv4Addr {
 }
 
 impl Deserializable for Ipv4Addr {
-    fn deserialize(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        if data.len() == 4 {
-            Ok(Ipv4Addr::new(data[0], data[1], data[2], data[3]))
+    fn deserialize(data: &[u8]) -> Result<(Self, usize), Box<dyn std::error::Error>> {
+        if data.len() >= 4 {
+            Ok((Ipv4Addr::new(data[0], data[1], data[2], data[3]), 4))
         } else {
             Err(Box::new(Error::DeserializationFailed{ reason: format!(
                 "4 bytes input data required for constructing Ipv4Addr.\n\
