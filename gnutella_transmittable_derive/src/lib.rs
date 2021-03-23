@@ -5,10 +5,10 @@ use proc_macro2::{Span as Span2, TokenStream as TokenStream2};
 
 use syn::{
     parse_macro_input, parse_quote, spanned::Spanned, Data, DeriveInput, Error, Field, Fields,
-    GenericParam, Generics, Ident,
+    GenericParam, Generics, Ident, Index,
 };
 
-use quote::{quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned};
 
 macro_rules! derive_error {
     ($string: tt) => {
@@ -18,23 +18,33 @@ macro_rules! derive_error {
     };
 }
 
+/// This derive macro generates implementation for
+/// [Serializable](gnutella::transmittable::Serializable),
+/// [Deserializable](gnutella::transmittable::Deserializable)
+/// and [Transmittable](gnutella::transmittable::Transmittable) trait
+/// if all the members of the struct implement
+/// [`Transmittable`](gnutella::transmittable::Transmittable).
+///
+/// If the struct contains generic types, the trait is implemented
+/// such for a generic type `T`, `impl <T: Transmittable>`.
+
 #[proc_macro_derive(Transmittable)]
 pub fn derive_transmittable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ref name = input.ident;
 
-    let mut parse_struct_res = match parse_struct(&input) {
+    let parse_struct_res = match parse_struct(&input) {
         Ok(parse_struct_res) => parse_struct_res,
         Err(e) => return e,
     };
 
-    // We take mutable ref to the fields of struct because
+    // We take ref to the fields of struct because
     // they need to be used inside quote! macro.
     // Struct members can't be interpolated directly in quote!
-    let ref mut assert_transmittable_bound_on_fields = parse_struct_res.transmittable_bounds;
-    let ref mut serialize_funcs = parse_struct_res.serialize_funcs;
-    let ref mut deserialize_funcs = parse_struct_res.deserialize_funcs;
-    let ref mut struct_maker = parse_struct_res.struct_maker;
+    let ref assert_transmittable_bound_on_fields = parse_struct_res.transmittable_bounds;
+    let ref serialize_funcs = parse_struct_res.serialize_funcs;
+    let ref deserialize_funcs = parse_struct_res.deserialize_funcs;
+    let ref struct_maker = parse_struct_res.struct_maker;
 
     let generics = add_trait_bound(input.generics, "Transmittable");
 
@@ -68,10 +78,23 @@ pub fn derive_transmittable(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/// This is the struct returned from [parse_struct].
 struct ParseStructRes {
+    /// `TokenStream2` containing code for all fields of struct checking
+    /// if the field's type implements Transmittable trait.
     transmittable_bounds: TokenStream2,
+
+    /// `TokenStream2` containing code for all fields of struct
+    /// to serialize them and append to the existing vector `v`.
     serialize_funcs: TokenStream2,
+
+    /// `TokenStream2` containing code for all fields of struct
+    /// to deserialize the bytes array into their corresponding type
+    /// and increment `start` by `bytes_parsed` so that next field
+    /// can know where to start deserializing in byte array.
     deserialize_funcs: TokenStream2,
+
+    /// `TokenStream2` containing code for contruct an instance of struct.
     struct_maker: TokenStream2,
 }
 
@@ -86,6 +109,13 @@ impl ParseStructRes {
     }
 }
 
+/// This function fills up an instance of [ParseStructRes]
+/// while iterating over all fields of the struct.
+///
+/// The struct can be named, unnamed or unit.
+/// In case of unit struct, basically nothing is done.
+/// For named and unnamed structs, [gen_code_for_fields] is called
+/// which fills up an instance of [ParseStructRes] over successive iterations.
 fn parse_struct(derive_input: &DeriveInput) -> Result<ParseStructRes, TokenStream> {
     let mut parse_struct_res = ParseStructRes::new();
 
@@ -99,6 +129,8 @@ fn parse_struct(derive_input: &DeriveInput) -> Result<ParseStructRes, TokenStrea
                     gen_code_for_fields(&mut parse_struct_res, field, field_no);
                 }
 
+                // parse_struct_res.struct_maker can't be interpolated directly in
+                // quote!(). So took a ref.
                 let ref struct_maker = parse_struct_res.struct_maker;
 
                 parse_struct_res.struct_maker = quote_spanned! {fields_named.span()=>
@@ -112,6 +144,8 @@ fn parse_struct(derive_input: &DeriveInput) -> Result<ParseStructRes, TokenStrea
                     gen_code_for_fields(&mut parse_struct_res, field, field_no);
                 }
 
+                // parse_struct_res.struct_maker can't be interpolated directly in
+                // quote!(). So took a ref.
                 let ref struct_maker = parse_struct_res.struct_maker;
 
                 parse_struct_res.struct_maker = quote_spanned! {fields_unnamed.span()=>
@@ -134,15 +168,17 @@ fn parse_struct(derive_input: &DeriveInput) -> Result<ParseStructRes, TokenStrea
     Ok(parse_struct_res)
 }
 
+/// This function is used by [parse_struct] to fill up an instance of [ParseStructRes]
+/// upon successive iterations.
+///
+/// * `parse_struct_res` - Partially updated [ParseStructRes] instance.
+/// * `field` - The field to work on.
+/// * `field_no` - Position of the field. (useful for tuple structs, e.g., self.0, self.1 etc.)
 fn gen_code_for_fields(parse_struct_res: &mut ParseStructRes, field: &Field, field_no: usize) {
-    // This closure does the common tasks of named and unnamed fields.
-    // field_type :- Type of the field
-    // field_name :- Name of the field in case of named fields
-    // field_no   :- Position of the field. (useful for tuple structs, e.g., self.0, self.1 etc.)
-
     let ref field_type = field.ty;
     let ref field_name = field.ident;
 
+    // Assert that the field's type implements Transmittable
     parse_struct_res
         .transmittable_bounds
         .extend(quote_spanned! {field.span()=>
@@ -150,12 +186,15 @@ fn gen_code_for_fields(parse_struct_res: &mut ParseStructRes, field: &Field, fie
         });
 
     if let Some(field_name) = field_name {
+        // Serialize the current field and update the vector `v`
         parse_struct_res
             .serialize_funcs
             .extend(quote_spanned! {field.span()=>
                 let v = self.#field_name.serialize_append(v)?;
             });
 
+        // Deserialize bytes to generate an instance of current field's type
+        // and update `start` by incrementing `bytes_parsed`.
         parse_struct_res
             .deserialize_funcs
             .extend(quote_spanned! {field.span()=>
@@ -164,34 +203,45 @@ fn gen_code_for_fields(parse_struct_res: &mut ParseStructRes, field: &Field, fie
                 start += bytes_parsed;
             });
 
+        // This is used to make a new named struct instance.
         parse_struct_res
             .struct_maker
             .extend(quote_spanned! {field.span()=>
                 #field_name,
             });
     } else {
+        let tuple_index = Index::from(field_no);
+
+        // Serialize the current field and update the vector `v`
         parse_struct_res
             .serialize_funcs
             .extend(quote_spanned! {field.span()=>
-                let v = self.#field_no.serialize_append(v)?;
+                let v = self.#tuple_index.serialize_append(v)?;
             });
 
+        let deserialized_ident = format_ident!("deserialized_{}", field_no);
+
+        // Deserialize bytes to generate an instance of current field's type
+        // and update `start` by incrementing `bytes_parsed`.
         parse_struct_res
             .deserialize_funcs
             .extend(quote_spanned! {field.span()=>
-                let (deserialized_#field_no, bytes_parsed)
+                let (#deserialized_ident, bytes_parsed)
                     = <#field_type as Deserializable>::deserialize(&data[start..])?;
                 start += bytes_parsed;
             });
 
+        // This is used to make a new tuple struct instance.
         parse_struct_res
             .struct_maker
             .extend(quote_spanned! {field.span()=>
-                deserialized_#field_no,
+                #deserialized_ident,
             });
     }
 }
 
+/// This function adds the a trait bound specified by `bound` to
+/// all the type params in `generics`.
 fn add_trait_bound(mut generics: Generics, bound: &str) -> Generics {
     for param in &mut generics.params {
         if let GenericParam::Type(ref mut type_param) = param {
