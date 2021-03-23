@@ -10,6 +10,12 @@ struct Abc<T> {
     z: Ipv4Addr,
 }
 
+#[derive(Debug, Transmittable)]
+struct Def<T, U>(T, U, u32, Ipv4Addr);
+
+#[derive(Debug, Transmittable)]
+struct Xyz;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let x = Ipv4Addr::new(1, 2, 3, 4);
