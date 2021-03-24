@@ -38,3 +38,28 @@ macro_rules! impl_integer_transmittable {
 }
 
 impl_integer_transmittable!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128);
+
+#[cfg(test)]
+mod tests {
+    use super::{Deserializable, Serializable};
+
+    #[test]
+    fn test_integer_transmittable() {
+        let x = 12345_i64;
+
+        let x_serialized = match x.serialize() {
+            Ok(bytes) => bytes,
+            Err(err) => panic!("{}", err),
+        };
+
+        let x_deserialized = match <i64 as Deserializable>::deserialize(&x_serialized) {
+            Ok((x, bytes_parsed)) => {
+                assert_eq!(bytes_parsed, std::mem::size_of::<i64>());
+                x
+            }
+            Err(err) => panic!("{}", err),
+        };
+
+        assert_eq!(x_deserialized, x);
+    }
+}
