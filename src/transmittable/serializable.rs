@@ -13,8 +13,6 @@ pub trait Serializable {
         // Generally the needed vector capacity should be equal to
         // the number of bytes
         let v = Vec::<u8>::with_capacity(size_of::<Self>());
-
-        println!("cap = {}", v.capacity());
         self.serialize_append(v)
     }
 }
