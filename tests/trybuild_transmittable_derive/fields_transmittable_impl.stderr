@@ -1,0 +1,18 @@
+error[E0277]: the trait bound `String: Serializable` is not satisfied
+ --> $DIR/fields_transmittable_impl.rs:9:5
+  |
+9 |     y: String,
+  |     ^^^^^^^^^ the trait `Serializable` is not implemented for `String`
+  |
+  = note: required by `serialize_append`
+
+error[E0277]: the trait bound `String: Deserializable` is not satisfied
+ --> $DIR/fields_transmittable_impl.rs:9:5
+  |
+9 |     y: String,
+  |     ^^^^^^^^^ the trait `Deserializable` is not implemented for `String`
+  |
+ ::: $WORKSPACE/src/transmittable/deserializable.rs
+  |
+  |         Self: Sized;
+  |               ----- required by this bound in `deserialize`
