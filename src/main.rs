@@ -1,7 +1,9 @@
-use std::{thread};
+use std::thread;
 
-use gnutella::transmittable::{Serializable, Deserializable, Transmittable};
-use gnutella_transmittable_derive::Transmittable;
+use gnutella::{
+    transmittable::{Deserializable, Serializable, Transmittable},
+    Transmittable,
+};
 use std::net::Ipv4Addr;
 use uuid::Uuid;
 
@@ -13,7 +15,6 @@ struct Test<T, U> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let test = Test {
         a: Uuid::new_v4(),
         b: 6_u32,
