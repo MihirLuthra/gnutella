@@ -3,52 +3,33 @@ use std::{thread};
 use gnutella::transmittable::{Serializable, Deserializable, Transmittable};
 use gnutella_transmittable_derive::Transmittable;
 use std::net::Ipv4Addr;
+use uuid::Uuid;
 
 #[derive(Debug, Transmittable)]
-struct Abc<T> {
+struct Test<T, U> {
     a: T,
-    z: Ipv4Addr,
+    b: U,
+    c: Ipv4Addr,
 }
 
-#[derive(Debug, Transmittable)]
-struct Def<T, U>(T, U, u32, Ipv4Addr);
-
-#[derive(Debug, Transmittable)]
-struct Xyz;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    
-    let x = Ipv4Addr::new(1, 2, 3, 4);
 
-    let iabc = Abc {a: 32, z: Ipv4Addr::new(1, 2, 3, 4)};
+    let test = Test {
+        a: Uuid::new_v4(),
+        b: 6_u32,
+        c: Ipv4Addr::new(1, 2, 3, 4),
+    };
 
-    let f = iabc.serialize()?;
+    println!("test = {:#?}", test);
+    println!("test.a.as_bytes() = {:?}", test.a.as_bytes());
 
-    println!("f = {:?}", f);
+    let serialized_test = test.serialize()?;
 
-    let (q, bytes) = Abc::<i32>::deserialize(&f).unwrap();
+    println!("serialized_test = {:?}", serialized_test);
 
-    println!("iabc = {:#?}", iabc);
-    println!("q = {:#?}, bytes = {}", q, bytes);
+    let deserialized_test = Test::<Uuid, u32>::deserialize(&serialized_test)?;
 
-    
-    println!("x = {}", x);
-
-    let y = x.serialize().unwrap();
-
-    println!("y = {:?}", y);
-
-    let (z, bytes) = Ipv4Addr::deserialize(&y).unwrap();
-
-    println!("z = {:?}, bytes = {}", z, bytes);
-
-
-    match u32::deserialize(&42u128.serialize().unwrap()) {
-        Ok((val, bytes)) => println!("val = {}, bytes = {}", val, bytes),
-        Err(e) => println!("err = {}", e),
-    }
-    
-    //start_server()?;
+    println!("deserialized_test = {:#?}", deserialized_test);
 
     Ok(())
 }
