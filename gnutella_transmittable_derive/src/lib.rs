@@ -21,9 +21,10 @@ macro_rules! derive_error {
 /// This derive macro generates implementation for
 /// [Serializable](gnutella::transmittable::Serializable),
 /// [Deserializable](gnutella::transmittable::Deserializable)
-/// and [Transmittable](gnutella::transmittable::Transmittable) trait
-/// if all the members of the struct implement
-/// [`Transmittable`](gnutella::transmittable::Transmittable).
+/// and [Transmittable](gnutella::transmittable::Transmittable) trait.
+///
+/// If the fields of struct don't implement the desired trait,
+/// an error will be raised when calling `<Type as Trait>::`.
 ///
 /// If the struct contains generic types, the trait is implemented
 /// such for a generic type `T`, `impl <T: Transmittable>`.
@@ -41,7 +42,6 @@ pub fn derive_transmittable(input: TokenStream) -> TokenStream {
     // We take ref to the fields of struct because
     // they need to be used inside quote! macro.
     // Struct members can't be interpolated directly in quote!
-    let ref assert_transmittable_bound_on_fields = parse_struct_res.transmittable_bounds;
     let ref serialize_funcs = parse_struct_res.serialize_funcs;
     let ref deserialize_funcs = parse_struct_res.deserialize_funcs;
     let ref struct_maker = parse_struct_res.struct_maker;
@@ -55,8 +55,6 @@ pub fn derive_transmittable(input: TokenStream) -> TokenStream {
             fn serialize_append(&self, mut v: std::vec::Vec<u8>)
                 -> std::result::Result<std::vec::Vec<u8>, std::boxed::Box<dyn std::error::Error>>
             {
-                fn assert_impl_transmittable<T: ?Sized + Transmittable>() {}
-                #assert_transmittable_bound_on_fields
                 #serialize_funcs
                 Ok(v)
             }
@@ -80,10 +78,6 @@ pub fn derive_transmittable(input: TokenStream) -> TokenStream {
 
 /// This is the struct returned from [parse_struct].
 struct ParseStructRes {
-    /// `TokenStream2` containing code for all fields of struct checking
-    /// if the field's type implements Transmittable trait.
-    transmittable_bounds: TokenStream2,
-
     /// `TokenStream2` containing code for all fields of struct
     /// to serialize them and append to the existing vector `v`.
     serialize_funcs: TokenStream2,
@@ -101,7 +95,6 @@ struct ParseStructRes {
 impl ParseStructRes {
     fn new() -> ParseStructRes {
         ParseStructRes {
-            transmittable_bounds: TokenStream2::new(),
             serialize_funcs: TokenStream2::new(),
             deserialize_funcs: TokenStream2::new(),
             struct_maker: TokenStream2::new(),
@@ -178,19 +171,12 @@ fn gen_code_for_fields(parse_struct_res: &mut ParseStructRes, field: &Field, fie
     let ref field_type = field.ty;
     let ref field_name = field.ident;
 
-    // Assert that the field's type implements Transmittable
-    parse_struct_res
-        .transmittable_bounds
-        .extend(quote_spanned! {field.span()=>
-            assert_impl_transmittable::<#field_type>();
-        });
-
     if let Some(field_name) = field_name {
         // Serialize the current field and update the vector `v`
         parse_struct_res
             .serialize_funcs
             .extend(quote_spanned! {field.span()=>
-                let v = self.#field_name.serialize_append(v)?;
+                let v = <#field_type as Serializable>::serialize_append(&self.#field_name, v)?;
             });
 
         // Deserialize bytes to generate an instance of current field's type
@@ -216,7 +202,7 @@ fn gen_code_for_fields(parse_struct_res: &mut ParseStructRes, field: &Field, fie
         parse_struct_res
             .serialize_funcs
             .extend(quote_spanned! {field.span()=>
-                let v = self.#tuple_index.serialize_append(v)?;
+                let v = <#field_type as Serializable>::serialize_append(&self.#tuple_index, v)?;
             });
 
         let deserialized_ident = format_ident!("deserialized_{}", field_no);
